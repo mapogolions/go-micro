@@ -3,6 +3,7 @@ package transport
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -14,6 +15,10 @@ import (
 
 	log "go-micro.dev/v5/logger"
 	"go-micro.dev/v5/util/buf"
+)
+
+const (
+	CorrelationID = "b6f0431e-1686-43db-a6b0-0436ef40f3f9"
 )
 
 type httpTransportClient struct {
@@ -36,6 +41,7 @@ type httpTransportClient struct {
 	once sync.Once
 
 	closed bool
+	seq    int64
 }
 
 func (h *httpTransportClient) Local() string {
@@ -53,6 +59,8 @@ func (h *httpTransportClient) Send(m *Message) error {
 	for k, v := range m.Header {
 		header.Set(k, v)
 	}
+	header.Set(CorrelationID, fmt.Sprintf("%d", h.seq))
+	h.seq++
 
 	b := buf.New(bytes.NewBuffer(m.Body))
 	defer func() {
@@ -173,6 +181,9 @@ func (h *httpTransportClient) Recv(msg *Message) (err error) {
 
 	if msg.Header == nil {
 		msg.Header = make(map[string]string, len(rsp.Header))
+	}
+	if req != nil {
+		msg.Header[CorrelationID] = req.Header.Get(CorrelationID)
 	}
 
 	for k, v := range rsp.Header {
