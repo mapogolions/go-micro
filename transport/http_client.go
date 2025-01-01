@@ -97,6 +97,8 @@ func (h *httpTransportClient) Send(m *Message) error {
 			return err
 		}
 	}
+	// h.Lock()
+	// defer h.Unlock()
 
 	return req.Write(h.conn)
 
